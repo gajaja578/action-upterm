@@ -1,5 +1,5 @@
 
-name: Manual test
+name: main
 
 on:
   workflow_dispatch:
