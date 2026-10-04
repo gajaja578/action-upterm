@@ -1,1 +1,116 @@
 
+name: Manual test
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs-on:
+        type: choice
+        description: 'The runner pool to run the job on'
+        required: true
+        default: ubuntu-24.04
+        options:
+          - ubuntu-24.04
+          - ubuntu-22.04
+          - ubuntu-slim
+          - macos-26
+          - macos-15
+          - macos-15-intel
+          - macos-14
+          - windows-2025
+          - windows-2022
+          - windows-11-arm
+      container-runs-on:
+        type: choice
+        description: 'The Docker container to run the job on (this overrides the `runs-on` input)'
+        required: false
+        default: '(none)'
+        options:
+          - '(none)'
+          - fedora:latest
+          - archlinux:latest
+          - ubuntu:latest
+      limit-access-to-actor:
+        type: choice
+        description: 'Whether to limit access to the actor only'
+        required: true
+        default: 'true'
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  test:
+    if: ${{ inputs.container-runs-on == '(none)' }}
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        if: ${{ inputs.runs-on == 'windows-11-arm' }}
+        with:
+          msystem: 'CLANGARM64'
+          location: C:\.\
+
+      - uses: actions/checkout@v4
+
+      - name: Load SSH key
+        if: ${{ !startsWith(inputs.runs-on, 'windows') }}
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Clone my private repo
+        if: ${{ !startsWith(inputs.runs-on, 'windows') }}
+        shell: bash
+        run: |
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          git clone git@github.com:gajaja578/myproject2.git ~/myproject2
+
+      - uses: ./
+        with:
+          limit-access-to-actor: ${{ inputs.limit-access-to-actor }}
+
+  test-container:
+    if: ${{ inputs.container-runs-on != '(none)' }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.container-runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 缺才装 git / openssh-client
+      - name: Ensure git and openssh-client
+        shell: bash
+        run: |
+          need_install=0
+          command -v git >/dev/null 2>&1 || need_install=1
+          command -v ssh >/dev/null 2>&1 || need_install=1
+          if [ "$need_install" -eq 0 ]; then
+            echo "git and ssh already present, skipping install"
+            exit 0
+          fi
+          echo "Missing tools, installing..."
+          if command -v apt-get >/dev/null; then
+            apt-get update && apt-get install -y git openssh-client
+          elif command -v dnf >/dev/null; then
+            dnf install -y git openssh-clients
+          elif command -v pacman >/dev/null; then
+            pacman -Sy --noconfirm git openssh
+          else
+            echo "No supported package manager found"
+            exit 1
+          fi
+
+      - name: Load SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Clone my private repo
+        shell: bash
+        run: |
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          git clone git@github.com:gajaja578/myproject2.git ~/myproject2
+
+      - uses: ./
+        with:
+          limit-access-to-actor: ${{ inputs.limit-access-to-actor }}
