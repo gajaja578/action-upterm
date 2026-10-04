@@ -63,9 +63,24 @@ jobs:
           git clone git@github.com:gajaja578/myproject2.git ~/myproject2
 
       - name: Setup upterm session
+        id: upterm
         uses: owenthereal/action-upterm@v2
         with:
           limit-access-to-actor: ${{ inputs.limit-access-to-actor }}
+          detached: true
+
+      - name: Save SSH command to file
+        if: steps.upterm.outputs.ssh-command
+        shell: bash
+        run: |
+          echo "${{ steps.upterm.outputs.ssh-command }}" > ssh-command.txt
+
+      - name: Upload SSH command
+        if: steps.upterm.outputs.ssh-command
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssh-command
+          path: ssh-command.txt
 
   test-container:
     if: ${{ inputs.container-runs-on != '(none)' }}
@@ -107,6 +122,21 @@ jobs:
           git clone git@github.com:gajaja578/myproject2.git ~/myproject2
 
       - name: Setup upterm session
+        id: upterm
         uses: owenthereal/action-upterm@v2
         with:
           limit-access-to-actor: ${{ inputs.limit-access-to-actor }}
+          detached: true
+
+      - name: Save SSH command to file
+        if: steps.upterm.outputs.ssh-command
+        shell: bash
+        run: |
+          echo "${{ steps.upterm.outputs.ssh-command }}" > ssh-command.txt
+
+      - name: Upload SSH command
+        if: steps.upterm.outputs.ssh-command
+        uses: actions/upload-artifact@v4
+        with:
+          name: ssh-command
+          path: ssh-command.txt
