@@ -1,5 +1,4 @@
-
-name: main
+name: Manual test
 
 on:
   workflow_dispatch:
@@ -50,8 +49,6 @@ jobs:
           msystem: 'CLANGARM64'
           location: C:\.\
 
-      - uses: actions/checkout@v4
-
       - name: Load SSH key
         if: ${{ !startsWith(inputs.runs-on, 'windows') }}
         uses: webfactory/ssh-agent@v0.9.0
@@ -65,7 +62,8 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
           git clone git@github.com:gajaja578/myproject2.git ~/myproject2
 
-      - uses: ./
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
         with:
           limit-access-to-actor: ${{ inputs.limit-access-to-actor }}
 
@@ -75,9 +73,6 @@ jobs:
     container:
       image: ${{ inputs.container-runs-on }}
     steps:
-      - uses: actions/checkout@v4
-
-      # 缺才装 git / openssh-client
       - name: Ensure git and openssh-client
         shell: bash
         run: |
@@ -111,6 +106,7 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
           git clone git@github.com:gajaja578/myproject2.git ~/myproject2
 
-      - uses: ./
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v2
         with:
           limit-access-to-actor: ${{ inputs.limit-access-to-actor }}
