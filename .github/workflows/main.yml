@@ -69,64 +69,13 @@ jobs:
           limit-access-to-actor: ${{ inputs.limit-access-to-actor }}
           detached: true
 
-      - name: Save SSH command to file
-        if: steps.upterm.outputs.ssh-command
+      # 6 小时保活：让 job 不结束，runner 不被回收
+      - name: Keep job alive for 6 hours
+        if: ${{ !startsWith(inputs.runs-on, 'windows') }}
         shell: bash
         run: |
-          echo "${{ steps.upterm.outputs.ssh-command }}" > ssh-command.txt
-
-      - name: Upload SSH command
-        if: steps.upterm.outputs.ssh-command
-        uses: actions/upload-artifact@v4
-        with:
-          name: ssh-command
-          path: ssh-command.txt
-
-  test-container:
-    if: ${{ inputs.container-runs-on != '(none)' }}
-    runs-on: ubuntu-latest
-    container:
-      image: ${{ inputs.container-runs-on }}
-    steps:
-      - name: Ensure git and openssh-client
-        shell: bash
-        run: |
-          need_install=0
-          command -v git >/dev/null 2>&1 || need_install=1
-          command -v ssh >/dev/null 2>&1 || need_install=1
-          if [ "$need_install" -eq 0 ]; then
-            echo "git and ssh already present, skipping install"
-            exit 0
-          fi
-          echo "Missing tools, installing..."
-          if command -v apt-get >/dev/null; then
-            apt-get update && apt-get install -y git openssh-client
-          elif command -v dnf >/dev/null; then
-            dnf install -y git openssh-clients
-          elif command -v pacman >/dev/null; then
-            pacman -Sy --noconfirm git openssh
-          else
-            echo "No supported package manager found"
-            exit 1
-          fi
-
-      - name: Load SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Clone my private repo
-        shell: bash
-        run: |
-          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-          git clone git@github.com:gajaja578/myproject2.git ~/myproject2
-
-      - name: Setup upterm session
-        id: upterm
-        uses: owenthereal/action-upterm@v2
-        with:
-          limit-access-to-actor: ${{ inputs.limit-access-to-actor }}
-          detached: true
+          echo "Job 保活中，6 小时后自动结束..."
+          sleep 21600
 
       - name: Save SSH command to file
         if: steps.upterm.outputs.ssh-command
